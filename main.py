@@ -2,6 +2,20 @@ import requests
 import json
 import subprocess
 import tempfile
+import os
+
+def count_lines_of_code(repo_dir):
+    """
+    Counts the lines of code in all code files in the given directory and its subdirectories.
+    """
+    total_lines = 0
+    for root, _, files in os.walk(repo_dir):
+        for file in files:
+            if file.endswith(('.py', '.java', '.js', '.cpp', '.c', '.cs', '.go', '.rb', '.php', '.ts', '.swift', '.rs')):  # Add more extensions as needed
+                file_path = os.path.join(root, file)
+                with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+                    total_lines += sum(1 for _ in f)
+    return total_lines
 
 def clone_repo(repo_url, temp_dir):
     """
@@ -12,7 +26,7 @@ def clone_repo(repo_url, temp_dir):
         # Construct the clone command with shallow clone option
         clone_command = f"git clone --depth 1 {repo_url} {temp_dir}"
         # Execute the clone command
-        subprocess.run(clone_command, shell=True, check=True)
+        subprocess.run(clone_command, shell=True, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         return temp_dir
     except subprocess.CalledProcessError as e:
         print(f"Failed to clone {repo_url}: {e}")
@@ -31,13 +45,11 @@ def process_repos(repos):
         with tempfile.TemporaryDirectory() as temp_dir:
             clone_path = clone_repo(repo_url, temp_dir)
             if clone_path:
-                # Here you would add the logic to count LOC in the cloned repository
-                # For demonstration, we'll just print the path to the cloned repo
-                print(f"Cloned {repo} into {clone_path}")
-                # Placeholder for LOC counting logic
-                loc_count = 0  # Replace this with actual LOC counting logic
-                
-                results[repo] = loc_count
+                loc_count = count_lines_of_code(clone_path)
+
+                if loc_count > 0:
+                    print(f"Cloned {repo} into {clone_path} with {loc_count} lines of code")
+                    results[repo] = loc_count
 
     return results
 
@@ -70,7 +82,7 @@ def fetch_github_repos(stars, num_of_repos):
 
 # Global variables for the number of stars and page number
 star_filter = 200
-num_of_repos_to_fetch = 25
+num_of_repos_to_fetch = 50
 
 # Example usage
 repos = fetch_github_repos(star_filter, num_of_repos_to_fetch)
